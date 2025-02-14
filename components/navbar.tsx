@@ -5,6 +5,29 @@ import Link from "next/link"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { Moon, Sun } from "lucide-react"
+import {usePrivy} from '@privy-io/react-auth';
+import { useRouter } from "next/navigation"
+
+function AccessButton() {
+  const {ready, authenticated, login } = usePrivy();
+
+  if (ready && authenticated) {
+    const router = useRouter();
+    return (
+      <Button onClick={() => router.push('/dashboard')}>
+        Dashboard
+      </Button>
+    )
+  }
+
+  const disableLogin = !ready || (ready && authenticated);
+
+  return (
+    <Button disabled={disableLogin} onClick={login}>
+      Sign In
+    </Button>
+  );
+}
 
 export default function Navbar() {
   const handleScroll = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
@@ -15,7 +38,7 @@ export default function Navbar() {
     }
   }
 
-  const { theme, setTheme } = useTheme()
+  const { theme, setTheme } = useTheme()  
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -59,9 +82,7 @@ export default function Navbar() {
             <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             <span className="sr-only">Toggle theme</span>
           </Button>
-          <Link href="/dashboard">
-            <Button>Sign In</Button>
-          </Link>
+          <AccessButton />
         </div>
       </div>
     </header>
