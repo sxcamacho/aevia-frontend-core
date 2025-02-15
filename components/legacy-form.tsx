@@ -34,7 +34,7 @@ import {
   type Abi,
   Chain,
 } from "viem";
-import { sepolia, mantleSepoliaTestnet, modeTestnet, baseSepolia, avalancheFuji, polygon, mainnet, avalanche } from "viem/chains";
+import { sepolia, mantle, mantleSepoliaTestnet, modeTestnet, baseSepolia, avalancheFuji, polygon, mainnet, avalanche } from "viem/chains";
 import { createLegacy, getSignatureMessage, setSignature, startCron } from "@/lib/api";
 import { useContract } from "@/hooks/use-contract"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -219,6 +219,7 @@ const tokens: TokensType = {
 const chainsByChainId: { [chainId: number]: Chain } = {
   1: mainnet,
   11155111: sepolia,
+  5000: mantle,
   5003: mantleSepoliaTestnet,
   84532: baseSepolia,
   919: modeTestnet,
