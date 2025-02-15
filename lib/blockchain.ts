@@ -33,6 +33,29 @@ export const ERC20_ABI = [
   },
 ];
 
+export const ERC721_ABI = [
+  {
+    name: "setApprovalForAll",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "operator", type: "address" },
+      { name: "approved", type: "bool" }
+    ],
+    outputs: []
+  },
+  {
+    name: "isApprovedForAll",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "operator", type: "address" }
+    ],
+    outputs: [{ type: "bool" }]
+  }
+];
+
 export interface EIP712Data {
   domain: {
     name: string;
@@ -102,6 +125,8 @@ export const signTypedData = async (data: EIP712Data, chain: Chain) => {
   if (!window.ethereum) {
     throw new Error("MetaMask is not installed");
   }
+
+  await switchNetworkIfNeeded(chain);
 
   const walletClient = createWalletClient({
     chain,
@@ -217,3 +242,65 @@ export async function transferTokens(
     throw error;
   }
 }
+
+export const approveERC721 = async (
+  tokenAddress: Address,
+  operatorAddress: Address,
+  chain: Chain
+): Promise<string> => {
+  if (!window.ethereum) {
+    throw new Error("MetaMask is not installed");
+  }
+
+  await switchNetworkIfNeeded(chain);
+
+  const walletClient = createWalletClient({
+    chain,
+    transport: custom(window.ethereum)
+  });
+
+  const [address] = await walletClient.requestAddresses();
+
+  const hash = await walletClient.writeContract({
+    address: tokenAddress,
+    abi: ERC721_ABI,
+    functionName: 'setApprovalForAll',
+    args: [operatorAddress, true],
+    account: address
+  });
+
+  return hash;
+};
+
+export const checkERC721Approval = async (
+  tokenAddress: Address,
+  operatorAddress: Address,
+  chain: Chain
+): Promise<boolean> => {
+  if (!window.ethereum) {
+    throw new Error("MetaMask is not installed");
+  }
+
+  await switchNetworkIfNeeded(chain);
+
+  const publicClient = createPublicClient({
+    chain,
+    transport: custom(window.ethereum)
+  });
+
+  const walletClient = createWalletClient({
+    chain,
+    transport: custom(window.ethereum)
+  });
+
+  const [address] = await walletClient.requestAddresses();
+
+  const isApproved: boolean = await publicClient.readContract({
+    address: tokenAddress,
+    abi: ERC721_ABI,
+    functionName: 'isApprovedForAll',
+    args: [address, operatorAddress],
+  }) as boolean;
+
+  return isApproved;
+};

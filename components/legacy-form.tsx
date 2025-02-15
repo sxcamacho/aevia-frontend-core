@@ -20,7 +20,9 @@ import {
   signTypedData,
   checkAllowance,
   ERC20_ABI,
-  transferTokens
+  transferTokens,
+  approveERC721,
+  checkERC721Approval,
 } from "@/lib/blockchain";
 import {
   createPublicClient,
@@ -32,8 +34,8 @@ import {
   type Abi,
   Chain,
 } from "viem";
-import { sepolia, mantleTestnet, modeTestnet, baseSepolia, avalancheFuji, polygon, mainnet, avalanche } from "viem/chains";
-import { createLegacy, getSignatureMessage, getContractByNameAndChainId, setSignature, startCron } from "@/lib/api";
+import { sepolia, mantleSepoliaTestnet, modeTestnet, baseSepolia, avalancheFuji, polygon, mainnet, avalanche } from "viem/chains";
+import { createLegacy, getSignatureMessage, setSignature, startCron } from "@/lib/api";
 import { useContract } from "@/hooks/use-contract"
 import { Checkbox } from "@/components/ui/checkbox"
 import { AlertCircle, Loader2 } from "lucide-react"
@@ -79,18 +81,18 @@ const networks = [
     image: "https://s2.coinmarketcap.com/static/img/coins/64x64/5805.png",
     chainId: 43113,
   },
-  // {
-  //   id: 2,
-  //   name: "Mantle Sepolia Testnet",
-  //   image: "https://s2.coinmarketcap.com/static/img/coins/64x64/27075.png",
-  //   chainId: 5003,
-  // },
-  // {
-  //   id: 3,
-  //   name: "Mantle Mainnet",
-  //   image: "https://s2.coinmarketcap.com/static/img/coins/64x64/27075.png",
-  //   chainId: 5000,
-  // },
+  {
+    id: 2,
+    name: "Mantle Sepolia Testnet",
+    image: "https://s2.coinmarketcap.com/static/img/coins/64x64/27075.png",
+    chainId: 5003,
+  },
+  {
+    id: 3,
+    name: "Mantle Mainnet",
+    image: "https://s2.coinmarketcap.com/static/img/coins/64x64/27075.png",
+    chainId: 5000,
+  },
   // {
   //   id: 4,
   //   name: "Base Sepolia Testnet",
@@ -145,6 +147,15 @@ const tokens: TokensType = {
       type: "ERC20",
       decimals: 6,
     },
+    {
+      id: 3,
+      name: "Just a Boy",
+      image: "https://trump-boys.vercel.app/boyss.jpg",
+      address: "0xAef300963d15241AF89EB4bD9bea326867d397a6" as Address,
+      chainId: 5003,
+      type: "ERC721",
+      decimals: 0,
+    }
   ],
   5000: [
     {
@@ -208,7 +219,7 @@ const tokens: TokensType = {
 const chainsByChainId: { [chainId: number]: Chain } = {
   1: mainnet,
   11155111: sepolia,
-  5003: mantleTestnet,
+  5003: mantleSepoliaTestnet,
   84532: baseSepolia,
   919: modeTestnet,
   43113: avalancheFuji,
@@ -302,10 +313,23 @@ export default function LegacyForm({ onClose }: Props) {
         cryptoWalletTo: cryptoFeatureEnabled ? formData.recipientAddress : null,
         cryptoTokenAddress: cryptoFeatureEnabled ? selectedToken.address : null,
         cryptoTokenId: selectedToken.type === "ERC721" ? formData.tokenId : null,
-        cryptoAmount: selectedToken.type === "ERC20" ? parseUnits(formData.amount, selectedToken.decimals).toString() : null,
+        cryptoAmount: (() => {
+          switch (selectedToken.type) {
+            case "ERC20":
+              return parseUnits(formData.amount, selectedToken.decimals).toString();
+            case "ERC721":
+              return "1";
+            case "ERC1155":
+              return formData.amount;
+            default:
+              return null;
+          }
+        })(),
         cryptoChainId: cryptoFeatureEnabled ? selectedToken.chainId : null,
         cryptoTokenType: selectedToken.type === "ERC20" ? 0 : 1,
       };
+
+      
       
       const legacyData = await createLegacy(payload);
       console.log("Legacy saved successfully:", legacyData);
@@ -359,7 +383,9 @@ export default function LegacyForm({ onClose }: Props) {
           legacy: `${formData.amount} ${selectedToken.name}`,
         });
         console.log("Cron started successfully");
-      }      
+      }   
+      
+      onClose?.();
 
       toast({
         title: "Legacy created successfully",
@@ -380,12 +406,14 @@ export default function LegacyForm({ onClose }: Props) {
 
   // Función para verificar allowance
   const verifyAllowance = useCallback(async () => {
-    if (cryptoFeatureEnabled && 
-        selectedToken.type === "ERC20" && 
-        formData.amount && 
-        protocolContract) {
-      try {
-        const chain = chainsByChainId[selectedNetwork.chainId];
+    if (!cryptoFeatureEnabled || !protocolContract) return;
+
+    try {
+      const chain = chainsByChainId[selectedNetwork.chainId];
+
+      if (selectedToken.type === "ERC20") {
+        if (!formData.amount) return;
+        
         const allowed = await checkAllowance(
           selectedToken.address,
           protocolContract.address,
@@ -394,33 +422,63 @@ export default function LegacyForm({ onClose }: Props) {
           chain
         );
         setHasAllowance(allowed);
-      } catch (error) {
-        console.error("Error checking allowance:", error);
-        setHasAllowance(false);
+      } 
+      else if (selectedToken.type === "ERC721") {
+        const isApproved = await checkERC721Approval(
+          selectedToken.address,
+          protocolContract.address,
+          chain
+        );
+        setHasAllowance(isApproved);
       }
+    } catch (error) {
+      console.error("Error checking approval:", error);
+      setHasAllowance(false);
     }
-  }, [cryptoFeatureEnabled, formData.amount, selectedToken, protocolContract, selectedNetwork.chainId]);
+  }, [
+    cryptoFeatureEnabled,
+    formData.amount,
+    selectedToken,
+    protocolContract,
+    selectedNetwork.chainId
+  ]);
 
   useEffect(() => {
     verifyAllowance();
   }, [verifyAllowance]);
 
   const handleApprove = async () => {
+    if (!protocolContract) return;
+
     try {
-      if (!protocolContract?.address) return;
-      if (!formData.amount) return;
+      if (selectedToken.type === "ERC20") {
+        await approveERC20(
+          selectedToken.address,
+          protocolContract.address,
+          formData.amount,
+          selectedToken.decimals,
+          chainsByChainId[selectedNetwork.chainId]
+        );
+      } else if (selectedToken.type === "ERC721") {
+        await approveERC721(
+          selectedToken.address,
+          protocolContract.address,
+          chainsByChainId[selectedNetwork.chainId]
+        );
+      }
       
-      const chain = chainsByChainId[selectedNetwork.chainId];
-      await approveERC20(
-        selectedToken.address,
-        protocolContract.address,
-        formData.amount,
-        selectedToken.decimals,
-        chain
-      );
-      await verifyAllowance();
+      setHasAllowance(true);
+      toast({
+        title: "Approval successful",
+        description: "You can now proceed with the legacy creation.",
+      });
     } catch (error) {
-      console.error("Error approving spend:", error);
+      console.error("Error approving:", error);
+      toast({
+        title: "Approval failed",
+        description: "Please try again",
+        variant: "destructive",
+      });
     }
   };
 
@@ -464,6 +522,36 @@ export default function LegacyForm({ onClose }: Props) {
     }
   }, [selectedNetwork.chainId]);
 
+  useEffect(() => {
+    const checkApproval = async () => {
+      if (!protocolContract) return;
+
+      try {
+        if (selectedToken.type === "ERC20") {
+          const hasAllowance = await checkAllowance(
+            selectedToken.address,
+            protocolContract.address,
+            formData.amount,
+            selectedToken.decimals,
+            chainsByChainId[selectedNetwork.chainId]
+          );
+          setHasAllowance(hasAllowance);
+        } else if (selectedToken.type === "ERC721") {
+          const isApproved = await checkERC721Approval(
+            selectedToken.address,
+            protocolContract.address,
+            chainsByChainId[selectedNetwork.chainId]
+          );
+          setHasAllowance(isApproved);
+        }
+      } catch (error) {
+        console.error("Error checking approval:", error);
+      }
+    };
+
+    checkApproval();
+  }, [selectedToken, formData.amount, protocolContract]);
+
   const handleAssignAddress = async () => {
     setIsAssigningAddress(true);
     // simulate API call
@@ -487,7 +575,12 @@ export default function LegacyForm({ onClose }: Props) {
       formData.email.trim() !== "" &&
       formData.trustedContactEmail.trim() !== "" &&
       formData.emailTo.trim() !== "" &&
-      formData.amount.trim() !== "" &&
+      (
+        // For ERC20 and ERC1155, check amount
+        ((selectedToken.type === "ERC20" || selectedToken.type === "ERC1155") && formData.amount.trim() !== "") ||
+        // For ERC721, amount is always 1
+        selectedToken.type === "ERC721"
+      ) &&
       (
         // if not investment, we need recipientAddress
         (!formData.useInvestment && formData.recipientAddress.trim() !== "") ||
@@ -1115,17 +1208,18 @@ export default function LegacyForm({ onClose }: Props) {
       <div className="sticky bottom-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center justify-between gap-x-6 p-4">
           <div>
-            {cryptoFeatureEnabled && !formData.useInvestment && 
-              selectedToken.type === "ERC20" && 
-              !!formData.amount && 
-              !hasAllowance && (
-                <button
-                  type="button"
-                  onClick={handleApprove}
-                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-blue-100 text-blue-900 hover:bg-blue-200 h-10 px-4 py-2"
-                >
-                  Approve {formData.amount} {selectedToken.name}
-                </button>
+            {cryptoFeatureEnabled && !formData.useInvestment && !hasAllowance && (
+              <button
+                type="button"
+                onClick={handleApprove}
+                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-blue-100 text-blue-900 hover:bg-blue-200 h-10 px-4 py-2"
+              >
+                {selectedToken.type === "ERC20" ? (
+                  <>Approve {formData.amount} {selectedToken.name}</>
+                ) : (
+                  <>Approve {selectedToken.name} Collection</>
+                )}
+              </button>
             )}
           </div>
 
