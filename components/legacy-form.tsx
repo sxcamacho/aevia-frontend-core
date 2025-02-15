@@ -163,7 +163,7 @@ const tokens: TokensType = {
       name: "Just a Boy",
       image: "https://trump-boys.vercel.app/boyss.jpg",
       address: "0x144cfdAe8a75E5D7008740992eD2694E660b6C2C" as Address,
-      chainId: 5003,
+      chainId: 5000,
       type: "ERC721",
       decimals: 0,
     },
