@@ -38,7 +38,7 @@ export default function Hero() {
           </p>
         </div>
         <div className="flex gap-4">
-          <Link href="https://aevia.netlify.app/">
+          <Link href="https://aevia-landing.netlify.app/dashboard">
             <Button size="lg">
               Get Started
               <ArrowRight className="ml-2 h-4 w-4" />
