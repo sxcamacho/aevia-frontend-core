@@ -82,16 +82,19 @@ const networks = [
     chainId: 43113,
   },
   {
-    id: 2,
     name: "Mantle Sepolia Testnet",
     image: "https://s2.coinmarketcap.com/static/img/coins/64x64/27075.png",
     chainId: 5003,
   },
   {
-    id: 3,
     name: "Mantle Mainnet",
     image: "https://s2.coinmarketcap.com/static/img/coins/64x64/27075.png",
     chainId: 5000,
+  },
+  {
+    name: "Movement Network",
+    image: "https://s2.coinmarketcap.com/static/img/coins/64x64/32452.png",
+    chainId: 30732,
   },
   // {
   //   id: 4,
@@ -211,6 +214,17 @@ const tokens: TokensType = {
       type: "ERC20",
       decimals: 18,
       investment: true,
+    },
+  ],
+  30732: [
+    {
+      id: 1,
+      name: "MOVE",
+      image: "https://s2.coinmarketcap.com/static/img/coins/64x64/32452.png",
+      address: "0x3073f7aAA4DB83f95e9FFf17424F71D4751a3073" as Address,
+      chainId: 1,
+      type: "ERC20",
+      decimals: 18,
     },
   ],
 };
