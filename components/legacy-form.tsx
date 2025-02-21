@@ -34,7 +34,8 @@ import {
   type Abi,
   Chain,
 } from "viem";
-import { sepolia, mantle, mantleSepoliaTestnet, modeTestnet, baseSepolia, avalancheFuji, polygon, mainnet, avalanche } from "viem/chains";
+import { sepolia, mantle, mantleSepoliaTestnet, modeTestnet, baseSepolia, avalancheFuji, polygon, mainnet, avalanche, sonicTestnet } from "viem/chains";
+import { defineChain } from "viem/chains/utils";
 import { createLegacy, getSignatureMessage, setSignature, startCron } from "@/lib/api";
 import { useContract } from "@/hooks/use-contract"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -77,6 +78,11 @@ const networks = [
     chainId: 11155111,
   },
   {
+    name: "Mode Sepolia Testnet",
+    image: "https://s2.coinmarketcap.com/static/img/coins/64x64/31016.png",
+    chainId: 919,
+  },
+  {
     name: "Avalanche Fuji Testnet",
     image: "https://s2.coinmarketcap.com/static/img/coins/64x64/5805.png",
     chainId: 43113,
@@ -96,18 +102,16 @@ const networks = [
     image: "https://s2.coinmarketcap.com/static/img/coins/64x64/32452.png",
     chainId: 30732,
   },
-  // {
-  //   id: 4,
-  //   name: "Base Sepolia Testnet",
-  //   image: "https://s2.coinmarketcap.com/static/img/coins/64x64/27716.png",
-  //   chainId: 84532,
-  // },
-  // {
-  //   id: 5,
-  //   name: "Mode Sepolia Testnet",
-  //   image: "https://s2.coinmarketcap.com/static/img/coins/64x64/31016.png",
-  //   chainId: 919,
-  // },
+  {
+    name: "Base Sepolia Testnet",
+    image: "https://s2.coinmarketcap.com/static/img/coins/64x64/27716.png",
+    chainId: 84532,
+  },
+  {
+    name: "Sonic Blaze Testnet",
+    image: "https://s2.coinmarketcap.com/static/img/coins/64x64/32684.png",
+    chainId: 57054,
+  },
 ];
 
 const tokens: TokensType = {
@@ -227,7 +231,47 @@ const tokens: TokensType = {
       decimals: 18,
     },
   ],
+  57054: [
+    {
+      id: 1,
+      name: "CORAL",
+      image: "https://s2.coinmarketcap.com/static/img/coins/64x64/32684.png",
+      address: "0xAF93888cbD250300470A1618206e036E11470149" as Address,
+      chainId: 57054,
+      type: "ERC20",
+      decimals: 18
+    },
+    {
+      id: 2,
+      name: "RUBY",
+      image: "https://s2.coinmarketcap.com/static/img/coins/64x64/32684.png",
+      address: "0x75190d6e62B8984b987B2336fD10552eD0e6a538" as Address,
+      chainId: 57054,
+      type: "ERC20",
+      decimals: 18
+    },
+  ]
 };
+
+const sonicBlazeTestnet = defineChain({
+  id: 57054,
+  name: 'Sonic Blaze Testnet',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'Sonic',
+    symbol: 'S',
+  },
+  rpcUrls: {
+    default: { http: ['https://rpc.blaze.soniclabs.com'] },
+  },
+  blockExplorers: {
+    default: {
+      name: 'Sonic Blaze Testnet Explorer',
+      url: 'https://testnet.sonicscan.org/',
+    },
+  },
+  testnet: true,
+})
 
 // Add a mapping of chainId to Chain object
 const chainsByChainId: { [chainId: number]: Chain } = {
@@ -240,6 +284,7 @@ const chainsByChainId: { [chainId: number]: Chain } = {
   43113: avalancheFuji,
   43114: avalanche,
   137: polygon,
+  57054: sonicBlazeTestnet
   // ... add other chains as needed
 };
 
