@@ -78,40 +78,40 @@ const networks = [
     chainId: 11155111,
   },
   {
-    name: "Mode Sepolia Testnet",
-    image: "https://s2.coinmarketcap.com/static/img/coins/64x64/31016.png",
-    chainId: 919,
-  },
-  {
-    name: "Avalanche Fuji Testnet",
-    image: "https://s2.coinmarketcap.com/static/img/coins/64x64/5805.png",
-    chainId: 43113,
-  },
-  {
-    name: "Mantle Sepolia Testnet",
-    image: "https://s2.coinmarketcap.com/static/img/coins/64x64/27075.png",
-    chainId: 5003,
-  },
-  {
-    name: "Mantle Mainnet",
-    image: "https://s2.coinmarketcap.com/static/img/coins/64x64/27075.png",
-    chainId: 5000,
-  },
-  {
-    name: "Movement Network",
-    image: "https://s2.coinmarketcap.com/static/img/coins/64x64/32452.png",
-    chainId: 30732,
-  },
-  {
-    name: "Base Sepolia Testnet",
-    image: "https://s2.coinmarketcap.com/static/img/coins/64x64/27716.png",
-    chainId: 84532,
-  },
-  {
     name: "Sonic Blaze Testnet",
     image: "https://s2.coinmarketcap.com/static/img/coins/64x64/32684.png",
     chainId: 57054,
   },
+  // {
+  //   name: "Mode Sepolia Testnet",
+  //   image: "https://s2.coinmarketcap.com/static/img/coins/64x64/31016.png",
+  //   chainId: 919,
+  // },
+  // {
+  //   name: "Avalanche Fuji Testnet",
+  //   image: "https://s2.coinmarketcap.com/static/img/coins/64x64/5805.png",
+  //   chainId: 43113,
+  // },
+  // {
+  //   name: "Mantle Sepolia Testnet",
+  //   image: "https://s2.coinmarketcap.com/static/img/coins/64x64/27075.png",
+  //   chainId: 5003,
+  // },
+  // {
+  //   name: "Mantle Mainnet",
+  //   image: "https://s2.coinmarketcap.com/static/img/coins/64x64/27075.png",
+  //   chainId: 5000,
+  // },
+  // {
+  //   name: "Movement Network",
+  //   image: "https://s2.coinmarketcap.com/static/img/coins/64x64/32452.png",
+  //   chainId: 30732,
+  // },
+  // {
+  //   name: "Base Sepolia Testnet",
+  //   image: "https://s2.coinmarketcap.com/static/img/coins/64x64/27716.png",
+  //   chainId: 84532,
+  // },
 ];
 
 const tokens: TokensType = {
