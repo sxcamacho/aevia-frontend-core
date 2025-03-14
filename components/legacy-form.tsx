@@ -309,14 +309,11 @@ export default function LegacyForm({ onClose }: Props) {
   );
 
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    country: "United States",
-    trustedContactEmail: "",
-    emailTo: "",
-    emailMessage: "",
-    recipientAddress: "",
+    name: "",
+    telegramId: "",
+    telegramIdEmergency: "",
+    telegramIdHeir: "",
+    heirWallet: "",
     amount: "",
     tokenId: "",
     useInvestment: false,
@@ -325,13 +322,8 @@ export default function LegacyForm({ onClose }: Props) {
   });
 
   const [riskLevel, setRiskLevel] = useState(0);
-
   const riskLabels = ["Low", "Medium", "High"];
-
-  const [custodialAddress, setCustodialAddress] = useState<string | null>(null);
-  const [isAssigningAddress, setIsAssigningAddress] = useState(false);
-
-  // Agregar nuevo estado
+  const [investmentWallet, setInvestmentWallet] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleInputChange = (
@@ -361,19 +353,11 @@ export default function LegacyForm({ onClose }: Props) {
 
       // Uncomment when ready to use
       const payload = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        country: formData.country,
-        trustedContactName: "",
-        trustedContactEmail: formData.trustedContactEmail,
-        emailTo: emailFeatureEnabled ? formData.emailTo : null,
-        emailMessage: emailFeatureEnabled ? formData.emailMessage : null,
-        cryptoWalletFrom: cryptoFeatureEnabled ? userWalletAddress : null,
-        cryptoWalletTo: cryptoFeatureEnabled ? formData.recipientAddress : null,
-        cryptoTokenAddress: cryptoFeatureEnabled ? selectedToken.address : null,
-        cryptoTokenId: selectedToken.type === "ERC721" ? formData.tokenId : null,
-        cryptoAmount: (() => {
+        chain_id: cryptoFeatureEnabled ? selectedToken.chainId : null,
+        token_type: selectedToken.type === "ERC20" ? 1 : 2,
+        token_address: cryptoFeatureEnabled ? selectedToken.address : null,
+        token_id: selectedToken.type === "ERC721" ? formData.tokenId : null,
+        amount: (() => {
           switch (selectedToken.type) {
             case "ERC20":
               return parseUnits(formData.amount, selectedToken.decimals).toString();
@@ -385,13 +369,20 @@ export default function LegacyForm({ onClose }: Props) {
               return null;
           }
         })(),
-        cryptoChainId: cryptoFeatureEnabled ? selectedToken.chainId : null,
-        cryptoTokenType: selectedToken.type === "ERC20" ? 0 : 1,
+        wallet: cryptoFeatureEnabled ? userWalletAddress : null,
+        heir_wallet: cryptoFeatureEnabled ? formData.heirWallet : null,
+        name: formData.name,
+        telegram_id: formData.telegramId,
+        telegram_id_emergency: formData.telegramIdEmergency,
+        telegram_id_heir: emailFeatureEnabled ? formData.telegramIdHeir : null,
+        investment_enabled: formData.useInvestment,
+        investment_risk: formData.useInvestment ? formData.riskLevel + 1 : 0,
       };
 
       
       
       const legacyData = await createLegacy(payload);
+      setInvestmentWallet(legacyData.investment_wallet);
       console.log("Legacy saved successfully:", legacyData);
 
       if(formData.useInvestment) {
@@ -400,7 +391,7 @@ export default function LegacyForm({ onClose }: Props) {
         try {
           const hash = await transferTokens(
             selectedToken.address,
-            custodialAddress as Address,
+            legacyData.investment_wallet as Address,
             formData.amount,
             selectedToken.decimals,
             chainsByChainId[selectedNetwork.chainId]
@@ -437,9 +428,9 @@ export default function LegacyForm({ onClose }: Props) {
         console.log("Signature set successfully");
   
         await startCron({
-          user: formData.email,
-          beneficiary: formData.emailTo,
-          contact_id: formData.trustedContactEmail,
+          user: formData.telegramId,
+          beneficiary: formData.telegramIdHeir,
+          contact_id: formData.telegramIdEmergency,
           legacy: `${formData.amount} ${selectedToken.name}`,
         });
         console.log("Cron started successfully");
@@ -612,40 +603,19 @@ export default function LegacyForm({ onClose }: Props) {
     checkApproval();
   }, [selectedToken, formData.amount, protocolContract]);
 
-  const handleAssignAddress = async () => {
-    setIsAssigningAddress(true);
-    // simulate API call
-    const fakeAddress = "0x415b7843212d7a90bd8ad23877d6dc36e4db36b1";
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setCustodialAddress(fakeAddress);
-    setIsAssigningAddress(false);
-    
-    // update both states
-    setFormData(prev => ({
-      ...prev,
-      recipientAddress: fakeAddress,
-      investmentAccount: fakeAddress
-    }));
-  };
-
   const isFormValid = useCallback(() => {
     // basic required fields
     const basicFieldsValid = 
-      formData.firstName.trim() !== "" &&
-      formData.email.trim() !== "" &&
-      formData.trustedContactEmail.trim() !== "" &&
-      formData.emailTo.trim() !== "" &&
+      formData.name.trim() !== "" &&
+      formData.telegramId.trim() !== "" &&
+      formData.telegramIdEmergency.trim() !== "" &&
+      formData.telegramIdHeir.trim() !== "" &&
+      formData.heirWallet.trim() !== "" &&
       (
         // For ERC20 and ERC1155, check amount
         ((selectedToken.type === "ERC20" || selectedToken.type === "ERC1155") && formData.amount.trim() !== "") ||
         // For ERC721, amount is always 1
         selectedToken.type === "ERC721"
-      ) &&
-      (
-        // if not investment, we need recipientAddress
-        (!formData.useInvestment && formData.recipientAddress.trim() !== "") ||
-        // if investment, we need investmentAccount
-        (formData.useInvestment && formData.investmentAccount.trim() !== "")
       );
 
     // if token is ERC20, we need allowance
@@ -686,17 +656,17 @@ export default function LegacyForm({ onClose }: Props) {
               <div className="mt-4 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
                 <div className="sm:col-span-3">
                   <label
-                    htmlFor="first-name"
+                    htmlFor="name"
                     className="block text-sm/6 font-medium text-gray-900"
                   >
                     Name
                   </label>
                   <div className="mt-2">
                     <input
-                      id="first-name"
-                      name="firstName"
+                      id="name"
+                      name="name"
                       type="text"
-                      value={formData.firstName}
+                      value={formData.name}
                       onChange={handleInputChange}
                       className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
                     />
@@ -722,18 +692,18 @@ export default function LegacyForm({ onClose }: Props) {
                 </div> */}
                 <div className="sm:col-span-3">
                   <label
-                    htmlFor="email"
+                    htmlFor="telegram-id-emergency"
                     className="block text-sm/6 font-medium text-gray-900"
                   >
-                    Verification contact
+                    Emergency contact Telegram
                   </label>
                   <div className="mt-2">
                     <input
-                      id="email"
-                      name="email"
+                      id="telegram-id-emergency"
+                      name="telegramIdEmergency"
                       type="text"
-                      placeholder="Your Telegram username"
-                      value={formData.email}
+                      placeholder="Telegram username"
+                      value={formData.telegramIdEmergency}
                       onChange={handleInputChange}
                       className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
                     />
@@ -795,18 +765,18 @@ export default function LegacyForm({ onClose }: Props) {
                 </div> */}
                 <div className="sm:col-span-3">
                   <label
-                    htmlFor="trusted-contact-email"
+                    htmlFor="telegram-id"
                     className="block text-sm/6 font-medium text-gray-900"
                   >
-                    Emergency contact
+                    Verification contact Telegram
                   </label>
                   <div className="mt-2">
                     <input
-                      id="trusted-contact-email"
-                      name="trustedContactEmail"
+                      id="telegram-id"
+                      name="telegramId"
                       type="text"
-                      placeholder="Telegram username"
-                      value={formData.trustedContactEmail}
+                      placeholder="Your Telegram username"
+                      value={formData.telegramId}
                       onChange={handleInputChange}
                       className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
                     />
@@ -814,19 +784,19 @@ export default function LegacyForm({ onClose }: Props) {
                 </div>
                 <div className="sm:col-span-3">
                   <label
-                    htmlFor="username"
+                    htmlFor="telegram-id-heir"
                     className="block text-sm/6 font-medium text-gray-900"
                   >
-                    Heir contact
+                    Heir contact Telegram
                   </label>
                   <div className="mt-2">
                     <div className="flex items-center rounded-md bg-white pl-3 outline outline-1 -outline-offset-1 outline-gray-300 focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600">
                       <input
-                        id="email_to"
-                        name="emailTo"
+                        id="telegram-id-heir"
+                        name="telegramIdHeir"
                         type="text"
                         placeholder="Telegram username"
-                        value={formData.emailTo}
+                        value={formData.telegramIdHeir}
                         onChange={handleInputChange}
                         className="block min-w-0 grow py-1.5 pl-1 pr-3 text-base text-gray-900 placeholder:text-gray-400 focus:outline focus:outline-0 sm:text-sm/6"
                       />
@@ -1146,11 +1116,11 @@ export default function LegacyForm({ onClose }: Props) {
                   <div className="mt-2">
                     <div className="flex items-center rounded-md bg-white pl-3 outline outline-1 -outline-offset-1 outline-gray-300 focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600">
                       <input
-                        id="recipient_address"
-                        name="recipientAddress"
+                        id="heir_wallet"
+                        name="heirWallet"
                         type="text"
                         placeholder="0x00000000000000"
-                        value={formData.recipientAddress}
+                        value={formData.heirWallet}
                         onChange={handleInputChange}
                         className="block min-w-0 grow py-1.5 pl-1 pr-3 text-base text-gray-900 placeholder:text-gray-400 focus:outline focus:outline-0 sm:text-sm/6"
                       />
@@ -1202,7 +1172,15 @@ export default function LegacyForm({ onClose }: Props) {
                         </label>
                       </div>
 
-                      {formData.useInvestment && (
+                      {formData.useInvestment && (<>
+                         {investmentWallet && (
+                         <div className="flex items-center space-x-4">
+                           <div className="flex items-center gap-2 text-sm">
+                             <span className="text-muted-foreground">Account assigned:</span>
+                             <span className="font-medium">{investmentWallet}</span>
+                           </div>
+                           </div>
+                         )}
                         <div className="space-y-6">
                           <label className="mt-8 block text-sm font-medium text-gray-900">
                             Investment risk tolerance
@@ -1212,7 +1190,7 @@ export default function LegacyForm({ onClose }: Props) {
                               <span 
                                 key={label} 
                                 className={cn(
-                                  "text-sm", 
+                                  "text-sm",  
                                   riskLevel === index ? "font-medium text-primary" : "text-muted-foreground"
                                 )}
                               >
@@ -1225,15 +1203,16 @@ export default function LegacyForm({ onClose }: Props) {
                             step={1}
                             value={[riskLevel]}
                             onValueChange={([value]) => {
-                              setRiskLevel(value)
+                              setRiskLevel(0)
                               setFormData(prev => ({
                                 ...prev,
-                                riskLevel: value
+                                riskLevel: 0
                               }))
                             }}
                             className="w-full"
                           />
                         </div>
+                        </>
                       )}
                     </div>
 
@@ -1252,27 +1231,6 @@ export default function LegacyForm({ onClose }: Props) {
                             </p>
                           </AlertDescription>
                         </Alert>
-
-                        <div className="flex items-center space-x-4">
-                          {!custodialAddress ? (
-                            <button
-                              type="button"
-                              onClick={handleAssignAddress}
-                              disabled={isAssigningAddress}
-                              className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-amber-100 text-amber-900 hover:bg-amber-200 h-9 px-4"
-                            >
-                              {isAssigningAddress && (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              )}
-                              Assign Investment Account
-                            </button>
-                          ) : (
-                            <div className="flex items-center gap-2 text-sm">
-                              <span className="text-muted-foreground">Account assigned:</span>
-                              <span className="font-medium">{custodialAddress}</span>
-                            </div>
-                          )}
-                        </div>
                       </div>
                     )}
                   </div>
