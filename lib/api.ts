@@ -4,21 +4,19 @@ import { config } from "@/lib/config";
 const API_BASE_URL = config.api.baseUrl;
 
 interface LegacyPayload {
-  firstName: string;
-  lastName: string;
-  email: string;
-  country: string;
-  trustedContactName: string;
-  trustedContactEmail: string;
-  emailTo: string | null;
-  emailMessage: string | null;
-  cryptoWalletFrom: string | null;
-  cryptoWalletTo: string | null;
-  cryptoTokenAddress: string | null;
-  cryptoTokenId: string | null;
-  cryptoAmount: string | null;
-  cryptoChainId: number | null;
-  cryptoTokenType: number | null;
+  chain_id: number | null;
+  token_type: number | null;
+  token_address: string | null;
+  token_id: string | null;
+  amount: string | null;
+  wallet: string | null;
+  heir_wallet: string | null;
+  name: string;
+  telegram_id: string;
+  telegram_id_emergency: string;
+  telegram_id_heir: string | null;
+  investment_enabled: boolean;
+  investment_risk: number | null;
 }
 
 export const createLegacy = async (payload: LegacyPayload) => {
